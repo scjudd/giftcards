@@ -4,9 +4,11 @@ require 'nokogiri'
 
 class Date
   def mo
+    # Convenience function to return 2-digit month
     strftime('%m')
   end
   def yr
+    # Convenience function to return 2-digit year
     strftime('%y')
   end
 end
@@ -15,17 +17,22 @@ class GiftCard
   attr_reader :number, :exp, :cvv
   
   def initialize(number, exp, cvv)
+    # Initialize with number, expiration date, and cvv..
+    # GiftCard.new('1234-5678-9012-3456', '01/12', 123)
     @number = number.gsub('-','')
     @exp = Date.strptime(exp,"%m/%y")
     @cvv = cvv
   end
   def number_with_dashes
+    # Return the number with dashes
     "#{number[0..3]}-#{number[4..7]}-#{number[8..11]}-#{number[12..15]}"
   end
   def masked_number
+    # Return the number with the first 12 digits censored
     "XXXX-XXXX-XXXX-#{number[12..15]}"
   end
   def balance_as_s
+    # Return balance as a string
     "$#{"%0.2f" % balance}"
   end
   def http(domain)
@@ -59,9 +66,11 @@ class VanillaVisa < GiftCard
     super('/home.html?product=giftcard&csrfToken=')
   end
   def csrfToken
+    # Glean the CSRF Token from the 'login' page
     Nokogiri::HTML(login_page).xpath('//input[@name="csrfToken"]/@value').first.content
   end
   def balance
+    # Return the balance
     return @balance if @balance
     data = "velocityCheckFlag=true&csrfToken=#{csrfToken}&cardType=visa&cardNumber=#{number}&expiryMonth=#{exp.mo}&expiryYear=#{exp.yr}&creditCardID=#{cvv}&go="
     headers = {'Cookie' => cookie, 'Content-Type' => 'application/x-www-form-urlencoded'}
@@ -78,9 +87,11 @@ class VanillaMasterCard < GiftCard
     super('/home.html?locale=en_US&product=giftcard&csrfToken=')
   end
   def csrfToken
+    # Glean the CSRF Token from the 'login' page
     Nokogiri::HTML(login_page).xpath('//input[@name="csrfToken"]/@value').first.content
   end
   def balance
+    # Return the balance
     return @balance if @balance
     data = "velocityCheckFlag=true&csrfToken=#{csrfToken}&cardType=mastercard&cardNumber=#{number}&expiryMonth=#{exp.mo}&expiryYear=#{exp.yr}&creditCardID=#{cvv}&go="
     headers = {'Cookie' => cookie, 'Content-Type' => 'application/x-www-form-urlencoded'}
@@ -91,6 +102,7 @@ end
 
 class CardsArray < Array
   def total
+    # Return the sum of each GiftCard's balance
     return @total if @total
     @total = 0
     self.each do |c|
@@ -98,12 +110,14 @@ class CardsArray < Array
     end
     @total
   end
+  def total_as_s
+    # Return the sum of each GiftCard's balance as a string
+    "$#{"%0.2f" % total}"
+  end
+  # Sort GiftCards by balance destructively
   def sort_by_balance!
     self.sort! do |a, b|
       a.balance <=> b.balance
     end
-  end
-  def total_as_s
-    "$#{"%0.2f" % total}"
   end
 end

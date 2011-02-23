@@ -1,6 +1,5 @@
 require 'date'
-require 'net/https'
-require 'nokogiri'
+require 'mechanize'
 
 class Date
   def mo
@@ -39,72 +38,46 @@ class GiftCard
     # Return card value as a string
     "$#{"%0.2f" % value}" if respond_to? :value
   end
-  def http(domain)
-    # Return a Net::HTTP object for a given domain
-    @http ||= Net::HTTP.new(domain, 443).tap do |http|
-      http.use_ssl = true
-      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-    end
-  end
-  def cookie
-    # Return the cookie for the card site
-    login_page unless @cookie
-    @cookie
-  end
-  def login_page(path)
-    # Return page data for the card 'login' page, specified by path
-    return @login_page if @login_page
-    resp, data = http.get(path)
-    @cookie = resp.response['set-cookie']
-    @login_page = data
+  def agent
+    @agent ||= Mechanize.new
   end
 end
 
 class VanillaVisa < GiftCard
   attr_reader :value
   
-  def http
-    super('www.vanillavisa.com')
-  end
-  def login_page
-    super('/home.html?product=giftcard&csrfToken=')
-  end
-  def csrfToken
-    # Glean the CSRF Token from the 'login' page
-    Nokogiri::HTML(login_page).xpath('//input[@name="csrfToken"]/@value').first.content
-  end
   def balance
     # Return the balance
     return @balance if @balance
-    data = "velocityCheckFlag=true&csrfToken=#{csrfToken}&cardType=visa&cardNumber=#{number}&expiryMonth=#{exp.mo}&expiryYear=#{exp.yr}&creditCardID=#{cvv}&go="
-    headers = {'Cookie' => cookie, 'Content-Type' => 'application/x-www-form-urlencoded'}
-    resp, data = http.post('/accountHistory.html', data, headers)
-    @value = Nokogiri::HTML(data).css('.textBold.number').last.content.gsub(/\s/,'').gsub('$','').to_f
-    @balance = @value - Nokogiri::HTML(data).css('.textBold.number').first.content.gsub(/\s/,'').gsub('$','').to_f
+    page = agent.get 'http://www.vanillavisa.com/home.html?product=giftcard&csrfToken='
+    page = page.form_with(:action => /^\/accountHistory\.html/).tap do |form|
+      form.cardNumber = number
+      form.expiryMonth = exp.mo
+      form.expiryYear = exp.yr
+      form.creditCardID = cvv
+    end.submit
+    account = page.search '.textBold.number'
+    @value = account.last.content.gsub(/[\s$]/, '').to_f
+    @balance = @value - account.first.content.gsub(/[\s$]/, '').to_f
   end
 end
 
 class VanillaMasterCard < GiftCard
   attr_reader :value
   
-  def http
-    super('www.vanillamastercard.com')
-  end
-  def login_page
-    super('/home.html?locale=en_US&product=giftcard&csrfToken=')
-  end
-  def csrfToken
-    # Glean the CSRF Token from the 'login' page
-    Nokogiri::HTML(login_page).xpath('//input[@name="csrfToken"]/@value').first.content
-  end
   def balance
     # Return the balance
     return @balance if @balance
-    data = "velocityCheckFlag=true&csrfToken=#{csrfToken}&cardType=mastercard&cardNumber=#{number}&expiryMonth=#{exp.mo}&expiryYear=#{exp.yr}&creditCardID=#{cvv}&go="
-    headers = {'Cookie' => cookie, 'Content-Type' => 'application/x-www-form-urlencoded'}
-    resp, data = http.post('/accountHistory.html', data, headers)
-    @value = Nokogiri::HTML(data).css('.textBold.number').last.content.gsub(/\s/,'').gsub('$','').to_f
-    @balance = @value - Nokogiri::HTML(data).css('.textBold.number').first.content.gsub(/\s/,'').gsub('$','').to_f
+    page = agent.get 'http://www.vanillamastercard.com/home.html?locale=en_US&product=giftcard&csrfToken='
+    page = page.form_with(:action => /^\/accountHistory\.html/).tap do |form|
+      form.cardNumber = number
+      form.expiryMonth = exp.mo
+      form.expiryYear = exp.yr
+      form.creditCardID = cvv
+    end.submit
+    account = page.search '.textBold.number'
+    @value = account.last.content.gsub(/[\s$]/, '').to_f
+    @balance = @value - account.first.content.gsub(/[\s$]/, '').to_f
   end
 end
 

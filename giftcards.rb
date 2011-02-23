@@ -113,12 +113,7 @@ end
 class CardsArray < Array
   def total
     # Return the sum of each GiftCard's balance
-    return @total if @total
-    @total = 0
-    self.each do |c|
-      @total += c.balance
-    end
-    @total
+    @total ||= self.inject(0) { |result, card| result += card.balance }
   end
   def total_as_s
     # Return the sum of each GiftCard's balance as a string

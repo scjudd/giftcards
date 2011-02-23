@@ -41,11 +41,10 @@ class GiftCard
   end
   def http(domain)
     # Return a Net::HTTP object for a given domain
-    return @http if @http
-    @http = Net::HTTP.new(domain, 443)
-    @http.use_ssl = true
-    @http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-    @http
+    @http ||= Net::HTTP.new(domain, 443).tap do |http|
+      http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    end
   end
   def cookie
     # Return the cookie for the card site

@@ -48,8 +48,7 @@ class GiftCard
   end
   def cookie
     # Return the cookie for the card site
-    return @cookie if @cookie
-    login_page
+    login_page unless @cookie
     @cookie
   end
   def login_page(path)

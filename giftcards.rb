@@ -33,7 +33,11 @@ class GiftCard
   end
   def balance_as_s
     # Return balance as a string
-    "$#{"%0.2f" % balance}"
+    "$#{"%0.2f" % balance}" if respond_to? :balance
+  end
+  def value_as_s
+    # Return card value as a string
+    "$#{"%0.2f" % value}" if respond_to? :value
   end
   def http(domain)
     # Return a Net::HTTP object for a given domain
@@ -52,13 +56,15 @@ class GiftCard
   def login_page(path)
     # Return page data for the card 'login' page, specified by path
     return @login_page if @login_page
-    resp, data = http.get(path, nil)
+    resp, data = http.get(path)
     @cookie = resp.response['set-cookie']
     @login_page = data
   end
 end
 
 class VanillaVisa < GiftCard
+  attr_reader :value
+  
   def http
     super('www.vanillavisa.com')
   end
@@ -75,11 +81,14 @@ class VanillaVisa < GiftCard
     data = "velocityCheckFlag=true&csrfToken=#{csrfToken}&cardType=visa&cardNumber=#{number}&expiryMonth=#{exp.mo}&expiryYear=#{exp.yr}&creditCardID=#{cvv}&go="
     headers = {'Cookie' => cookie, 'Content-Type' => 'application/x-www-form-urlencoded'}
     resp, data = http.post('/accountHistory.html', data, headers)
-    @balance = Nokogiri::HTML(data).xpath('//table[@class="reportTable"][1]/tr[1]/td[2]/text()').first.content.gsub(/\s/,'').gsub('AvailableBalance:','').gsub('$','').to_f
+    @value = Nokogiri::HTML(data).css('.textBold.number').last.content.gsub(/\s/,'').gsub('$','').to_f
+    @balance = @value - Nokogiri::HTML(data).css('.textBold.number').first.content.gsub(/\s/,'').gsub('$','').to_f
   end
 end
 
 class VanillaMasterCard < GiftCard
+  attr_reader :value
+  
   def http
     super('www.vanillamastercard.com')
   end
@@ -96,7 +105,8 @@ class VanillaMasterCard < GiftCard
     data = "velocityCheckFlag=true&csrfToken=#{csrfToken}&cardType=mastercard&cardNumber=#{number}&expiryMonth=#{exp.mo}&expiryYear=#{exp.yr}&creditCardID=#{cvv}&go="
     headers = {'Cookie' => cookie, 'Content-Type' => 'application/x-www-form-urlencoded'}
     resp, data = http.post('/accountHistory.html', data, headers)
-    @balance = Nokogiri::HTML(data).xpath('//table[@class="reportTable"][1]/tr[1]/td[2]/text()').first.content.gsub(/\s/,'').gsub('AvailableBalance:','').gsub('$','').to_f
+    @value = Nokogiri::HTML(data).css('.textBold.number').last.content.gsub(/\s/,'').gsub('$','').to_f
+    @balance = @value - Nokogiri::HTML(data).css('.textBold.number').first.content.gsub(/\s/,'').gsub('$','').to_f
   end
 end
 

@@ -81,6 +81,27 @@ class VanillaMasterCard < GiftCard
   end
 end
 
+class GiftCardMallVisa < GiftCard
+  attr_reader :passcode
+
+  def initialize number, passcode, cvv
+    @number = number.gsub('-','')
+    @passcode = passcode
+    @cvv = cvv
+  end
+
+  def balance
+    return @balance if @balance
+    page = agent.get 'https://visagift.giftcardmall.com/index.cfm'
+    form = page.form_with(:name => 'form1')
+    form.cardnum = number
+    form.passcode = passcode
+    form.cvv2 = cvv
+    page = form.submit form.button_with(:name => 'sendinfo')
+    @balance = page.search('table.innerBox.withTabs tr')[2].search('td')[2].children[2].text.gsub(/[\s$]/, '').to_f
+  end
+end
+
 class CardsArray < Array
   def total
     # Return the sum of each GiftCard's balance

@@ -4,6 +4,7 @@ require 'giftcards'
 cards = CardsArray.new([
   VanillaVisa.new('4315-1234-5678-9012', '01/13', 123),
   VanillaMasterCard.new('5154-1234-5678-9012', '01/13', 123),
+  GiftCardMallVisaCard.new('4416-6912-3456-7890', '9999', 491),
 ])
 cards.sort_by_balance!
 

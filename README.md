@@ -1,4 +1,12 @@
-#!/usr/bin/env ruby
+giftcards
+=========
+
+A ruby library to check the balance on various gift cards
+
+Example
+-------
+
+```ruby
 require 'giftcards'
 
 cards = CardsArray.new([
@@ -12,3 +20,5 @@ cards.each do |c|
   puts "#{c.masked_number}: #{c.balance_as_s}"
 end
 puts "Total: #{cards.total_as_s}"
+```
+
